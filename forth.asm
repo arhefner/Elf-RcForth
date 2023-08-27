@@ -1081,10 +1081,10 @@ tokloop:      ldn           r7                   ; get byte from token table
               str           r2                   ; store to stack
               ldn           rb                   ; get byte from buffer
               sm                                 ; do bytes match?
-              bnz           toknomtch            ; jump if no match
+              lbnz          toknomtch            ; jump if no match
               inc           r7                   ; incrment token pointer
               inc           rb                   ; increment buffer pointer
-              br            tokloop              ; and keep looking
+              lbr           tokloop              ; and keep looking
 ; *********************************************************
 ; *** Token failed match, move to next and reset buffer ***
 ; *********************************************************
@@ -1625,7 +1625,7 @@ cminus:       call          pop                  ; get value from stack
 cmerr:        lbdf          error                ; jump if stack was empty
               mov           r7,rb                ; move number
               call          pop                  ; next number
-              bdf           cmerr                ; jump if stack was empty
+              lbdf          cmerr                ; jump if stack was empty
               glo           r7                   ; perform addition
               str           r2
               glo           rb
@@ -1635,9 +1635,9 @@ cmerr:        lbdf          error                ; jump if stack was empty
               str           r2
               ghi           rb
               smb
-              br            goodpushb
+              lbr           goodpushb
 cdot:         call          pop                  ; get value from stack
-cdoterr:      bdf           cmerr                ; jump if stack was empty
+cdoterr:      lbdf          cmerr                ; jump if stack was empty
               ldi           1
 typegoode:
               plo           re                   ; signal signed int (put in e incase SCRT doesn't do it)
@@ -2049,10 +2049,10 @@ cif:          call          pop
               plo           r7                   ; put into counter
 iflp1:        ldn           rb                   ; get next byte
               smi           FIF                  ; check for IF
-              bnz           ifnotif              ; jump if not
+              lbnz          ifnotif              ; jump if not
               inc           r7                   ; increment if count
 ifcnt:        inc           rb                   ; point to next byte
-              br            iflp1                ; keep looking
+              lbr           iflp1                ; keep looking
 ifnotif:      ldn           rb                   ; retrieve byte
               smi           FELSE                ; check for ELSE
               bnz           ifnotelse            ; jump if not
@@ -2438,7 +2438,7 @@ ccolcpydn:
 colonlp1:                                        ; here for both cases
               ldn           rb
               smi           T_NUM                ; a number could have T_EOS or F_SEMI in it!
-              bnz           colonckend
+              lbnz          colonckend
               inc           rb
               inc           rb
               inc           rb
@@ -2620,7 +2620,7 @@ colonmark:
 colonmcont:
               ldi           low freemem+1
               plo           r9                   ; set up for main code
-              br            ccolonpmult
+              lbr           ccolonpmult
 
 
 
@@ -2736,7 +2736,7 @@ seeveq:
               str           r2
               glo           rf
               or
-              bz           seevnoa              ; was equal, jump
+              lbz           seevnoa              ; was equal, jump
 seevallot:
               ; ok we need to do the allot here
               push          rb
@@ -2894,11 +2894,11 @@ seelp3:       lda           rb                   ; get byte from token
               br            seelp3               ; keep looking
 seetoken:     ldn           rb                   ; get byte from token
               ani           128                  ; is it last
-              bnz           seetklast            ; jump if so
+              lbnz          seetklast            ; jump if so
               ldn           rb                   ; retrieve byte
               call          disp
               inc           rb                   ; point to next character
-              br            seetoken             ; and loop til done
+              lbr           seetoken             ; and loop til done
 seetklast:    ldn           rb                   ; retrieve byte
               ani           07fh                 ; strip high bit
               call          disp
@@ -3105,7 +3105,7 @@ forgetlp1:    lda           rb                   ; get pointer
               ldn           rb
               plo           ra
               or                                 ; see if it was zero
-              bz            forgetd1             ; jump if it was
+              lbz           forgetd1             ; jump if it was
               glo           rc                   ; subtract RC from RA
               str           r2
               glo           ra
@@ -3118,7 +3118,7 @@ forgetlp1:    lda           rb                   ; get pointer
               smb
               str           rb
               mov           rb,ra
-              br            forgetlp1            ; loop until done
+              lbr           forgetlp1            ; loop until done
 forgetd1:     lda           r7                   ; get next entry
               phi           rb
               ldn           r7
@@ -3303,10 +3303,10 @@ ccmove:       call          pop
 ccmerr:       lbdf          error                ; jump if error
               mov           rc,rb                ; rc is count of bytes
               call          pop
-              bdf           ccmerr               ; jump if error
+              lbdf          ccmerr               ; jump if error
               mov           r8,rb                ; r8 is destination address
               call          pop
-              bdf           ccmerr               ; jump if error
+              lbdf          ccmerr               ; jump if error
               mov           r7,rb                ; r7 is source address
 
               ; transfer data
@@ -3412,7 +3412,7 @@ cdelay:       call          pop
 ; 0 delay turns out to be the same as 0x10000 delay so special case it
               glo           rb
               plo           r7
-              bnz           delaynz
+              lbnz          delaynz
               ghi           rb 
               lbz           good
 delaynz:      ghi           rb                  ; redundant unless you skipped from above
@@ -3494,7 +3494,7 @@ cbload2:      ldn           rb
               call          exec
               pop           rb
               inc           rb
-              br            cbload2
+              lbr           cbload2
 
 #endif
 
@@ -3690,7 +3690,7 @@ touc_nxt:     inc           rf                   ; point to next character
 touc_dn:      rtn                                ; return to caller
 touc_qt:      inc           rf                   ; move past quote
 touc_qlp:     lda           rf                   ; get next character
-              bz            touc_dn              ; exit if terminator found
+              lbz           touc_dn              ; exit if terminator found
               smi           022h                 ; check for quote charater
               lbz           touc                 ; back to main loop if quote
               lbr           touc_qlp             ; otherwise keep looking
@@ -3720,7 +3720,7 @@ typenumx:
               plo           r9
               ldn           r9
               smi           10
-              bnz           typehex
+              lbnz          typehex
               mov           rd,rb
               mov           rf, buffer
               glo           re
@@ -3780,16 +3780,16 @@ err:          smi           0                    ; signal an error
 ; **********************************
 ishex:        call          isnum
               plo           re                   ; keep a copy
-              bdf           passes               ; jump if it is numeric
+              lbdf          passes               ; jump if it is numeric
               smi           'A'                  ; check for below uppercase a
-              bnf           fails                ; value is not hex
+              lbnf          fails                ; value is not hex
               smi           6                    ; check for less then 'G'
-              bnf           passes               ; jump if so
+              lbnf          passes               ; jump if so
               glo           re                   ; recover value
               smi           'a'                  ; check for lowercase a
-              bnf           fails                ; jump if not
+              lbnf          fails                ; jump if not
               smi           6                    ; check for less than 'g'
-              bnf           passes               ; jump if so
+              lbnf          passes               ; jump if so
               lbr           fails
               ; clear tos, himem & rstack blocks
 
