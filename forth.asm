@@ -10,8 +10,8 @@
 ;[RLA] #define STGROM           ; build the STG EPROM version
 ;[RLA] #define PICOROM          ; define for Mike's PIcoElf version
 ;[RLA]   rcasm doesn't have any way to do a logical "OR" of assembly
-;[RLA} options, so define a master "ANYROM" option that's true for
-;[RLA} any of the ROM conditions...
+;[RLA] options, so define a master "ANYROM" option that's true for
+;[RLA] any of the ROM conditions...
               ; [gnr] Bug fixes, assembler fixes,and the Exec word
               ; A few notes as I've gone through the code (GNR)
               ; This isn't done like a conventional Forth
@@ -50,7 +50,7 @@
               ; VARIABLE can't have anything following it
               ; e.g. VARIABLE X X 0 ! -- does not work (now throws an error)
               ; on a word def is ignored also  (now throws an error)
-              ; These no longer throw errors and it ks now allowed
+              ; These no longer throw errors and it is now allowed
               ;  
               ; To catch all these we now define T_EOS 0xFD. The tokenizer marks the end of string with it
               ; and most things ignore it. But colon and varible use it to make sure the string is
@@ -80,22 +80,23 @@
               ; NOTE: The BIN format is highly dependent on the memory layout
               ; If you turn it back on, you will lose many extended words and you may
               ; have to redo the hex code blocks to work with the current memory layout
+#include macros.inc
 
 ; Configuration items
 
 ; pick EXACTLY one of the next three
 ;#define NO_BLOAD
-#define BLOAD_TEXT
+;#define BLOAD_TEXT
 ;#define BLOAD_BIN
 
 ; if you want to compile to a separate "compile buffer" define this
-#define USE_CBUFFER
+;#define USE_CBUFFER
 ; If you turn off CBUFFER and use BLOAD_TEXT, you'll need to uncomment some code in cbload...
 
 ; if you want to find the last of a multiply-defined user word instead of the first one...
 ; FIND_LAST is "better" Forth behavior but very inefficient
 ; Fixing that would require a reorg of the entire dictionary structure
-#define FIND_LAST
+;#define FIND_LAST
 
 ; Set up stuff based on your choices
 
@@ -167,7 +168,7 @@ exitaddr:     equ           08003h
 ; [GDJ] build: asm02 -i -L -DSTGROM forth.asm
 #ifdef        STGROM
 #define       ANYROM        1
-              include       config.inc
+              #include      config.inc
 #define       CODE          FORTH                ; [gnr] [GDG] ~19 pages w/all extended words
 #define       RAMBASE       00000h
               ; [gnr] The UART is used in inkey so when using bitbang, no inkey!
@@ -206,9 +207,9 @@ option:       equ           basev+2
 storage:      equ           option+2
 stack:        equ           RAMBASE+01ffh
 #endif
-              include       bios.inc
+              #include      bios.inc
 #ifdef        ELFOS
-              include       kernel.inc
+              #include      kernel.inc
               org           8000h
               lbr           0ff00h
               db            'rcforth',0
@@ -325,8 +326,7 @@ T_ASCII:      equ           254
               org           CODE
 #ifdef        ELFOS
               br            start
-              include       date.inc
-              include       build.inc
+              ever
               db            'Written by Michael H. Riley',0
 #endif
 
@@ -515,7 +515,7 @@ mainprompt:
 #else
               call          f_input              ; function to read a line
 #endif
-              bnf          mainent              ; jump if no ^C
+              bnf           mainent              ; jump if no ^C
               call          f_inmsg
               db            '^C',10,13,0
               call          ismulti
@@ -534,7 +534,7 @@ mainprompt:
               inc           r9
               glo           rf
               str           r9
-              br           mainlp
+              br            mainlp
 mainent:
               call          crlfout
               mov           rf,buffer            ; convert to uppercase
@@ -564,12 +564,14 @@ crlfout:
 ; *** Display a space
 ; **************************************
 dispsp:       ldi           ' '
+              plo           re
               br            disp
 ; **************************************
 ; *** Display a character, char db after call
 ; **************************************
 dispf:
               lda           r6                   ; get immediate character
+              plo           re
               ;  fall through
 ; **************************************
 ; *** Display a character, char in D ***
@@ -758,14 +760,14 @@ findchk:      ldn           r8                   ; get byte from requested name
               str           r2                   ; place into memory
               ldn           rb                   ; get byte from descriptor
               sm                                 ; compare equality
-              lbnz           findnext             ; jump if not found
+              lbnz          findnext             ; jump if not found
               ldn           r8                   ; get byte
               bz            findfound            ; entry is found
               inc           r8                   ; increment positions
               inc           rb
               br            findchk              ; and keep looking
 findfound:
-              pop          rf                    ; get old word pointer
+              pop           rf                   ; get old word pointer
               glo           re
               bz            findfirst
               ; not our first 
@@ -786,7 +788,7 @@ findfirst:    ldi          1
               ani          2
               bnz          findsuccess           ; find first instead of last
               push         rf                    ; old word pointer     
-              lbr           findnext     
+              lbr          findnext
 
 findsuccess:
               pop           rb
@@ -801,7 +803,7 @@ findnext:     pop           r8
               phi           rb
               ldn           r7
               plo           rb
-              lbr            findlp               ; and check next entry
+              lbr           findlp               ; and check next entry
 #endif
 
 
@@ -1017,8 +1019,8 @@ tokenlp:      ldn           rb                   ; get byte from buffer
 nonwhite:
               ldn           rb
 #ifndef NO_TOKEN_COMPRESSION
-              smi           T_NUM                 ; check for T_NUM
-              lbnz           tkstrck
+              smi           T_NUM                ; check for T_NUM
+              lbnz          tkstrck
               lda           rb                   ; load tokenized number
               str           rf
               inc           rf
@@ -1029,25 +1031,25 @@ nonwhite:
 copytoken:              
               str           rf
               inc           rf
-              lbr            tokenlp              ; go get more 
+              lbr           tokenlp              ; go get more
 
-tkstrck:                                        ; test for string token
+tkstrck:                                         ; test for string token
               ldn           rb
               smi           T_ASCII
-              lbnz           tkcompck
+              lbnz          tkcompck
 tkstrcpy:
-              lda           rb                  ; found a string
+              lda           rb                   ; found a string
               str           rf
               inc           rf
-              bnz           tkstrcpy
-              lbr            tokenlp
+              lbnz          tkstrcpy
+              lbr           tokenlp
 
 
 tkcompck:              
               ldn           rb              
               smi           07fh
               lda           rb  
-              lbdf           copycmdtk           ; will handle ." but needs a space after: db FDOTQT,20h,T_ASCII,'foo"',...
+              lbdf          copycmdtk           ; will handle ." but needs a space after: db FDOTQT,20h,T_ASCII,'foo"',...
               dec           rb
               ldn           rb
 #endif
@@ -1057,7 +1059,7 @@ tkcompck:
               ldn           rb
               dec           rb
               smi           (' '+1)
-              lbdf           nonwhite             ; nope, not a comment, just something that starts with \
+              lbdf          nonwhite             ; nope, not a comment, just something that starts with \
               ldi           0
               str           rb
               lbr           tokendn              ; zero it and ignore all else
@@ -1095,7 +1097,7 @@ nomtch1:      ldn           r7                   ; get byte from token
 nomtch2:      inc           r7                   ; point to next token
               inc           r8                   ; increment command number
               ldn           r7                   ; get next token byte
-              bnz          cmdloop              ; jump if more tokens to check
+              bnz           cmdloop              ; jump if more tokens to check
               br            notoken              ; jump if no token found
 ; ***********************************************************
 ; *** Made it to last byte of token, check remaining byte ***
@@ -1122,20 +1124,20 @@ tmatch:
               glo           r8                   ; get command number
               ori           128                  ; set high bit            
 copycmdtk:    plo           r8                   ; redundant UNLESS we jump to copycmdtk from elsewhere
-              smi          FOPAREN
-              bnz          tksto
+              smi           FOPAREN
+              bnz           tksto
 tkcomloop:              
-              lda          rb
-              smi          (' '+1)
-              bdf          tkcomloop             ; must be <space>)<space> to close
-              lda          rb                    
-              sdi          ')'
-              bnz          tkcomloop
-              lda          rb
+              lda           rb
+              smi           (' '+1)
+              bdf           tkcomloop            ; must be <space>)<space> to close
+              lda           rb
+              sdi           ')'
+              bnz           tkcomloop
+              lda           rb
               smi           (' '+1)              ; check for whitespace
-              bdf          tkcomloop   
-              dec          rb                    ; let tokenizer swallow the space (might be the last one)          
-              lbr          tokenlp
+              bdf           tkcomloop   
+              dec           rb                   ; let tokenizer swallow the space (might be the last one)          
+              lbr           tokenlp
 tksto:      
               glo           r8          
               str           rf                   ; write to command buffer
@@ -1185,8 +1187,8 @@ notoken:                                         ; get number BASE [GDJ]
               ldn           rb
               ani           080h 
               bnz           cconstdn
-              ldn           rb   
-#endif                             ;              
+              ldn           rb
+
               smi           (' '+1)              ; check for whitespace
               bdf           nocconstpop
 cconstdn:
@@ -1199,11 +1201,8 @@ cconstdn:
               inc           rb
               lbr           numberdn1
 
-
-
 nocconstpop:  mov           rb,rc
-nocconst:          
-#endif    
+nocconst:
               ldn           rb
               smi           '0'
               bnz           notokenbase          ; if no leading 0 can't be 0x or 0#
@@ -1218,17 +1217,17 @@ notoken_0:
               ldn           rb
               inc           rb
               smi           'X'
-              lbz            hexnum
+              lbz           hexnum
               br            decnum
-notokenbaseadj: dec           rb                   ; point back at 0
+notokenbaseadj: dec         rb                   ; point back at 0
 notokenbase:
 ;              mov           rd, basen
 ;              ldn           rd
-              ldi            low basen
-              plo            r9
-              ldn            r9
+              ldi           low basen
+              plo           r9
+              ldn           r9
               smi           10
-              lbnz           hexnum
+              lbnz          hexnum
 decnum:
               mov           rc,rb                ; save pointer in case of bad number
               ldi           0
@@ -1310,7 +1309,7 @@ numberlp:     ghi           r7                   ; copy number to temp (don't us
               ldn           rb
               smi           ('9'+1)
               bdf           numbererr
-              lbr            numberlp             ; get rest of number
+              lbr           numberlp             ; get rest of number
 numbererr:    mov           rb,rc                ; recover address
               br           nonnumber
 numberdn:     glo           re                   ; get negative flag
@@ -1381,11 +1380,11 @@ tohexal:      glo           r7
               ldn           rb
 #ifndef NO_TOKEN_COMPRESSION
               ani           080h 
-              bnz          numberdn1
+              bnz           numberdn1
               ldn           rb
 #endif                                          
               smi           (' '+1)              ; check for space
-              bnf          numberdn1            ; number is complete
+              bnf           numberdn1            ; number is complete
               ; words that begin with valid hex chars but have
               ; embedded non hex characters get filtered out here
               ldn           rb
@@ -1413,9 +1412,9 @@ notokenlp:    str           rf                   ; write to buffer
               inc           rb                   ; point to next position
               ldn           rb                   ; get next byte
 #ifndef NO_TOKEN_COMPRESSION
-              ani          080h                  ; treat a compressed token as whitespace
-              bnz          notokwht
-              ldn          rb
+              ani           080h                 ; treat a compressed token as whitespace
+              bnz           notokwht
+              ldn           rb
 #endif                            
               smi           (' '+1)              ; check for whitespace
               bnf           notokwht             ; found whitespace
@@ -1436,16 +1435,16 @@ tokendn:      ldi           T_EOS
 ; **************************************************** 
 ; *** Execute forth byte codes, RB points to codes ***
 ; ****************************************************
-exec:        ldi           low option+1
+exec:         ldi           low option+1
               plo           r9
               ldn           r9
               xri           080h 
-              lbnz            nodebug
+              lbnz          nodebug
               push          rb
               mov           rf,rb
               mov           r8,debug_hook
               call          findname
-              lbdf           nodebugpop
+              lbdf          nodebugpop
               ldi           low option+1
               plo           r9
               ldn           r9
@@ -1464,20 +1463,20 @@ exec:        ldi           low option+1
               call          exec
               irx
               irx
-              ldi          low option+1
-              plo          r9
-              ldn          r9
-              ani          40h                  ; request to turn off debugging?
-              bz           dbgresume
-              ldn          r9
-              ani          03fh
-              br           dbgreset
+              ldi           low option+1
+              plo           r9
+              ldn           r9
+              ani           40h                  ; request to turn off debugging?
+              bz            dbgresume
+              ldn           r9
+              ani           03fh
+              br            dbgreset
 dbgresume:              
-              ldn          r9
-              ori          80h 
+              ldn           r9
+              ori           80h
 dbgreset:              
-              str          r9  
-nodebugpop:   pop          rb
+              str           r9
+nodebugpop:   pop           rb
 nodebug:              
               ldn           rb                   ; get byte from codestream
               lbz           execdn               ; jump if at end of stream
@@ -1532,7 +1531,7 @@ execret:
               ldn           r2
               plo           rb
               glo           r7                   ; get result code
-              lbz            exec                 ; jump if no error
+              lbz           exec                 ; jump if no error
               mov           rf, msempty
 execrmsg:
 #ifdef        ELFOS
@@ -1548,7 +1547,7 @@ execnum:      inc           rb                   ; point to number
               plo           rb
               call          push
               mov           rb,r7
-              lbr            exec                 ; execute next code
+              lbr           exec                 ; execute next code
 execascii:    inc           rb                   ; move past ascii code
               mov           r8,rb                ; xfer name to R8
               call          findname             ; find entry
@@ -1559,7 +1558,7 @@ ascnoerr:     inc           r7                   ; point to type
               inc           r7
               ldn           r7                   ; get type
               smi           FVARIABLE            ; check for variable
-              bz           execvar              ; jump if so
+              bz            execvar              ; jump if so
               ldn           r7                   ; get type
               smi           FCOLON               ; check for function
               bnz           ascerr               ; jump if not
@@ -1621,9 +1620,9 @@ cplus:        call          pop                  ; get value from stack
               adc
 goodpushb:
               phi           rb
-              lbr            goodpush
+              lbr           goodpush
 cminus:       call          pop                  ; get value from stack
-cmerr:        lbdf           error                ; jump if stack was empty
+cmerr:        lbdf          error                ; jump if stack was empty
               mov           r7,rb                ; move number
               call          pop                  ; next number
               bdf           cmerr                ; jump if stack was empty
@@ -1654,9 +1653,9 @@ cdotx:
               call          pop
               bdf           canderr
               call          typenumind
-              lbr            good
+              lbr           good
 cand:         call          pop
-canderr:      lbdf           error                ; jump if stack was empty
+canderr:      lbdf          error                ; jump if stack was empty
               mov           r7,rb                ; move number
               call          pop
               bdf           canderr              ; jump if stack was empty
@@ -1669,7 +1668,7 @@ canderr:      lbdf           error                ; jump if stack was empty
               str           r2
               ghi           rb
               and
-              lbr            goodpushb
+              lbr           goodpushb
 cor:          call          pop
               bdf           canderr              ; jump if stack was empty
               mov           r7,rb                ; move number
@@ -1684,9 +1683,9 @@ cor:          call          pop
               str           r2
               ghi           rb
               or
-              lbr            goodpushb
+              lbr           goodpushb
 cxor:         call          pop
-cxorerr:      lbdf           error                ; jump if stack was empty
+cxorerr:      lbdf          error                ; jump if stack was empty
               mov           r7,rb                ; move number
               call          pop
               bdf           cxorerr              ; jump if stack was empty
@@ -1699,14 +1698,14 @@ cxorerr:      lbdf           error                ; jump if stack was empty
               str           r2
               ghi           rb
               xor
-              lbr            goodpushb
+              lbr           goodpushb
 ccr:          call          crlfout
-              lbr            good                 ; return
+              lbr           good                 ; return
 cswap:        call          pop
-cserr:        lbdf           error                ; jump if stack was empty
+cserr:        lbdf          error                ; jump if stack was empty
               mov           r7,rb                ; move number
               call          pop
-              lbdf           error                ; jump if stack was empty
+              lbdf          error                ; jump if stack was empty
               mov           r8,rb                ; move number
               mov           rb,r7                ; restore first number
               call          push                 ; put answer back on stack
@@ -1715,11 +1714,11 @@ cserr:        lbdf           error                ; jump if stack was empty
               glo           r8
 goodpushb0:
               plo           rb
-              lbr            goodpush
+              lbr           goodpush
 crat:
 ci:           call          rpop                 ; get value from return stack
               call          rpush                ; put it back
-              lbr            goodpush
+              lbr           goodpush
 cmem:
               ldi           low freemem          ; set R9 to free memory
               plo           r9
@@ -1785,7 +1784,7 @@ loopcnt:      mov           r7,rb
               inc           ra
               glo           rb                   ; get rb lo value
               str           ra                   ; and write it
-              lbr            goodrpush78b
+              lbr           goodrpush78b
 cloopdn:      call          rpop                 ; pop off start of loop address
               lbr           good                 ; and return
 cploop:       call          rpop                 ; get top or return stack
@@ -1803,13 +1802,13 @@ errorl0:      lbdf          error
               irx
               adc
               phi           rb
-              lbr            loopcnt              ; then standard loop code
+              lbr           loopcnt              ; then standard loop code
 cbegin:       mov           ra,r2
               inc           ra                   ; pointing at ra value high
               lda           ra                   ; get high of ra
               phi           rb                   ; put into rb
               lda           ra
-              lbr            goodrpushb0
+              lbr           goodrpushb0
 ; [GDJ] corrected logic - BEGIN/UNTIL loop should repeat if flag preceding UNTIL is FALSE
 cuntil:       call          pop                  ; get top of stack
               lbdf          error                ; jump if stack was empty
@@ -1833,7 +1832,7 @@ crgt:         call          rpop                 ; get value from return stack
               lbr           goodpush
 cgtr:         call          pop
               lbdf          error                ; jump if stack was empty
-              lbr            goodrpush
+              lbr           goodrpush
 cunequal:     call          pop
               bdf           cunerr               ; jump if stack was empty
               mov           r7,rb
@@ -1905,7 +1904,7 @@ culess:       call          pop
               str           r2
               ghi           r7
               sdb                                ; subtract with borrow
-              lbr            gooddf
+              lbr           gooddf
 cwords:       call          f_inmsg
               db            'CORE:',10,13,0
               mov           r7, cmdtable
@@ -1919,7 +1918,7 @@ cwordslp:     lda           r7                   ; get byte
               bnz           cwordsf              ; jump if so
               glo           rb                   ; get byte
               call          disp
-              lbr            cwordslp             ; and loop back
+              lbr           cwordslp             ; and loop back
 cwordsf:      glo           rb                   ; get byte
               ani           07fh                 ; strip high bit
               call          disp
@@ -1927,12 +1926,12 @@ cwordsf:      glo           rb                   ; get byte
               inc           rd
               glo           rd
               smi           12                   ; items per line
-              lbnz           cwordslp
+              lbnz          cwordslp
               ldi           0
               phi           rd
               plo           rd
               call          crlfout
-              lbr            cwordslp             ; and loop back
+              lbr           cwordslp             ; and loop back
 cwordsdn:     call          f_inmsg
               db            10,13,'USER:',10,13,0
               mov           r7,storage
@@ -2193,7 +2192,7 @@ cover:        call          pop                  ; get B
               ghi           r7                   ; get B
               phi           rb
               glo           r7
-              lbr            goodpushb8b
+              lbr           goodpushb8b
 cat:          call          pop
               lbdf          error                ; jump on error
               mov           r7,rb
@@ -2226,7 +2225,7 @@ ccerr:        lbdf          error                ; jump on error
               bdf           ccerr                ; jump on error
               br            goodexcl
 cvariable:    
-#idef USE_CBUFFER
+#ifdef USE_CBUFFER
 ; easier.. we just copy the FVARIABLE FASCII String and then bump up two bytes and go
               mov           ra,r2
               inc           ra                   ; point to R[6]
@@ -2264,7 +2263,7 @@ cvarlp:
               plo           rf
               dec           r9
               ldn           r9
-              phi          rf
+              phi           rf
               ghi           r7                  ; get memory pointer
               str           rf       
               str           r9
@@ -2373,54 +2372,54 @@ ccolon:
               ldn           ra
               plo           rb
 ; we have to copy from CBUFFER to  either FSEMI or T_EOS NOTE: T_NUM MIGHT HAVE A T_EOS or FSEMI in it!
-              ldi          low freemem
-              plo          r9
-              lda          r9
-              phi          rf
-              ldn          r9
-              plo          rf
-              call         ismulti
-              bnz          ccmulti               ; don't skip link for lines 2-n, only line 1
-              inc          rf                    ; skip link
-              inc          rf
-              dec          rb                    ; point back at FCOLON
-ccmulti:              
-              push         rf                    ; we will pop back to RB
+              ldi           low freemem
+              plo           r9
+              lda           r9
+              phi           rf
+              ldn           r9
+              plo           rf
+              call          ismulti
+              bnz           ccmulti               ; don't skip link for lines 2-n, only line 1
+              inc           rf                    ; skip link
+              inc           rf
+              dec           rb                    ; point back at FCOLON
+ccmulti:
+              push          rf                    ; we will pop back to RB
 
-              
-ccolcpy:      lda          rb
-              str          rf
-              inc          rf
-              plo          re                     ; hold temp
-              smi          T_NUM                  ; if T_NUM we must copy two more bytes no matter what
-              bnz          cccpyck
-              lda          rb
-              str          rf
-              inc          rf
-              lda          rb
-              str          rf
-              inc          rf
-              br          ccolcpy 
-cccpyck:      glo          re              
-              smi          FSEMI
-              bz           ccolcpydn
-              glo          re
-              smi          T_EOS
-              bnz          ccolcpy
+
+ccolcpy:      lda           rb
+              str           rf
+              inc           rf
+              plo           re                     ; hold temp
+              smi           T_NUM                  ; if T_NUM we must copy two more bytes no matter what
+              bnz           cccpyck
+              lda           rb
+              str           rf
+              inc           rf
+              lda           rb
+              str           rf
+              inc           rf
+              br            ccolcpy
+cccpyck:      glo           re
+              smi           FSEMI
+              bz            ccolcpydn
+              glo           re
+              smi           T_EOS
+              bnz           ccolcpy
 ccolcpydn:    
-              glo          rb
-              str          ra
-              dec          ra
-              ghi          rb
-              str          ra       ; set up exec to go after the semi or whatever
-              pop          rb       ; this was RF but now points to free mem area
-              inc          rb       ; skip FCOLON
+              glo           rb
+              str           ra
+              dec           ra
+              ghi           rb
+              str           ra                   ; set up exec to go after the semi or whatever
+              pop           rb                   ; this was RF but now points to free mem area
+              inc           rb                   ; skip FCOLON
 ; after that it is almost normal 
               call          ismulti
               inc           r9
-              lbnz           colonlp1             ; multiline, just keep it going
+              lbnz          colonlp1             ; multiline, just keep it going
  ; if first line, assume it MIGHT be multline
-              dec           rb                    ; go back after all
+              dec           rb                   ; go back after all
               dec           rb
               dec           rb
               glo           rb
@@ -2443,22 +2442,22 @@ colonlp1:                                        ; here for both cases
               inc           rb
               inc           rb
               inc           rb
-              lbr            colonlp1 
+              lbr           colonlp1
 colonckend:
               ldn           rb              
               smi           T_EOS
               lbz           colonmark
               lda           rb
               smi           FSEMI                ; look for the ;
-              lbnz           colonlp1             ; jump if terminator not found
+              lbnz          colonlp1             ; jump if terminator not found
               ldi           0                    ; want a command terminator
               str           rb                   ; write it
               inc           rb                   ; new value for freemem
-              call         ismulti
-              bz           colonpreline         ; single line
+              call          ismulti
+              bz            colonpreline         ; single line
 ; end of multiline
               ldi           02
-              str           r9                  ; end of multi marker ([JUMP]==2)
+              str           r9                   ; end of multi marker ([JUMP]==2)
               inc           r9
               lda           r9
               stxd
@@ -2526,7 +2525,7 @@ colonlp1:                                        ; lda     rb                  ;
               lbz           colonmark
               lda           rb
               smi           FSEMI                ; look for the ;
-             bnz           colonlp1             ; jump if terminator not found
+              bnz           colonlp1             ; jump if terminator not found
               ; check this is really the end
 ;              ldn           rb
 ;              smi           T_EOS
@@ -2534,7 +2533,7 @@ colonlp1:                                        ; lda     rb                  ;
               ldi           0                    ; want a command terminator
               str           rb                   ; write it
               inc           rb                   ; new value for freemem
-              call         ismulti
+              call          ismulti
               bz           colonpreline         ; single line
 ; end of multiline
               ldi           02
@@ -2699,7 +2698,7 @@ csee_sub0:
               inc           rb
 csub0:        ldn           rb                   ; set up rb to point correctly
               inc           rb
-              bnz           csub0
+              lbnz          csub0
 csee_sub:
               lda           r7                   ; move past next address  (store next in in RF for later)
               phi           rf
@@ -2853,18 +2852,18 @@ seefunclpns:
               ldn           r7                   ; get next token
               bz            seeexit              ; jump if done
               smi           T_ASCII              ; check for ascii
-              lbnz           seenota              ; jump if not ascii
+              lbnz          seenota              ; jump if not ascii
               inc           r7                   ; move into string
 seestrlp:     ldn           r7                   ; get next byte
-              lbz            seenext              ; jump if done with token
+              lbz           seenext              ; jump if done with token
               call          disp
               inc           r7                   ; point to next character
-              lbr            seestrlp             ; and continue til done
+              lbr           seestrlp             ; and continue til done
 seenext:      inc           r7                   ; point to next token
-              lbr            seefunclp
+              lbr           seefunclp
 seenota:      ldn           r7                   ; reget token
               smi           T_NUM                ; is it a number
-              lbnz           seenotn              ; jump if not a number
+              lbnz          seenotn              ; jump if not a number
               inc           r7                   ; move past token
               lda           r7                   ; get number into rb
               phi           rb
@@ -2881,7 +2880,7 @@ seenota:      ldn           r7                   ; reget token
               ldx
               plo           r7
               inc           r7
-              lbr            seefunclpns          ; next token with no space
+              lbr           seefunclpns          ; next token with no space
 seenotn:      mov           rb,cmdtable
               ldn           r7                   ; get token
               ani           07fh                 ; strip high bit
@@ -2966,31 +2965,31 @@ callotyes:    inc           r7                   ; point to type byte
               call          pop
               lbdf          error                ; jump if error
 ; here R8 points to the zero and R7 points to the FVARIABLE. RB has the amount to adjust
-              dec          r7           ; point to low part
+              dec           r7                   ; point to low part
 
-              ldi          low freemem+1
-              plo          r9
-              glo          rb
-              str          r2
-              glo          r8
+              ldi           low freemem+1
+              plo           r9
+              glo           rb
+              str           r2
+              glo           r8
               add
-              str          r9
-              str          r7
-              plo          rf
-              dec          r9
-              dec          r7
-              ghi          rb
-              str          r2
-              ghi          r8
+              str           r9
+              str           r7
+              plo           rf
+              dec           r9
+              dec           r7
+              ghi           rb
+              str           r2
+              ghi           r8
               adc
-              str          r9
-              str          r7
-              phi          rf
-              ldi          0
-              str          rf
-              inc          rf
-              str          rf
-              lbr          good
+              str           r9
+              str           r7
+              phi           rf
+              ldi           0
+              str           rf
+              inc           rf
+              str           rf
+              lbr           good
 
 
 #else
@@ -3300,28 +3299,28 @@ intable:
 ; -----------------------------------------------------------------
 ; additions April 2022  GDJ
 ; -----------------------------------------------------------------
-ccmove:    call    pop
-ccmerr:    lbdf    error               ; jump if error
-           mov     rc,rb               ; rc is count of bytes
-           call    pop
-           bdf     ccmerr               ; jump if error
-           mov     r8,rb               ; r8 is destination address
-           call    pop
-           bdf     ccmerr               ; jump if error
-           mov     r7,rb               ; r7 is source address
+ccmove:       call          pop
+ccmerr:       lbdf          error                ; jump if error
+              mov           rc,rb                ; rc is count of bytes
+              call          pop
+              bdf           ccmerr               ; jump if error
+              mov           r8,rb                ; r8 is destination address
+              call          pop
+              bdf           ccmerr               ; jump if error
+              mov           r7,rb                ; r7 is source address
 
-           ; transfer data
-           ; begin check for zero byte count else tragedy could result
-cmovelp:   glo     rc
-           bnz    cmovestr
-           ghi     rc
-           bnz    cmovestr
-           lbr     good
-cmovestr:  lda     r7
-           str     r8
-           inc     r8
-           dec     rc
-           br     cmovelp
+              ; transfer data
+              ; begin check for zero byte count else tragedy could result
+cmovelp:      glo           rc
+              bnz           cmovestr
+              ghi           rc
+              bnz           cmovestr
+              lbr           good
+cmovestr:     lda           r7
+              str           r8
+              inc           r8
+              dec           rc
+              br            cmovelp
 
 csetq:        call          pop
               lbdf          error                ; jump if error
@@ -3345,7 +3344,7 @@ crand:        call          randbyte
               plo           rb
               ldi           0
               lbr           goodpushb
-              ;  call f_msg but first store terminator and reset f to buffer
+              ; call f_msg but first store terminator and reset f to buffer
 f_msg_term:   ldi           0
               str           rf
               mov           rf, buffer
@@ -3353,62 +3352,58 @@ f_msg_term:   ldi           0
 ; -----------------------------------------------------------------------------
 ; 'C' style operators for bit shifting, note no range check on number of shifts
 ; -----------------------------------------------------------------------------
-clshift:   sep     scall               ; get value from stack
-           dw      pop
-           lbdf    error               ; jump if stack was empty
-           glo     rb                  ; move number 
-           plo     r7                  ; number of shifts
+clshift:      call          pop                  ; get value from stack
+              lbdf          error                ; jump if stack was empty
+              glo           rb                   ; move number 
+              plo           r7                   ; number of shifts
 
-           sep     scall               ; get next number
-           dw      pop
-           lbdf    error               ; jump if stack was empty
-           mov     r8,rb               ; value to shift left
+              call          pop                  ; get next number
+              lbdf          error                ; jump if stack was empty
+              mov           r8,rb                ; value to shift left
 
-           glo     r7                  ; zero shift is identity 
-           lbnz    lshiftlp
-           lbr     lshiftret           ; return with no shift
+              glo           r7                   ; zero shift is identity 
+              lbnz          lshiftlp
+              lbr           lshiftret            ; return with no shift
 
-lshiftlp:  glo     r8
-           shl                         ; shift lo byte
-           plo     r8
-           ghi     r8
-           shlc                        ; shift hi byte with carry
-           phi     r8
-           dec     r7
-           glo     r7
-           lbnz    lshiftlp
+lshiftlp:     glo           r8
+              shl                                ; shift lo byte
+              plo           r8
+              ghi           r8
+              shlc                               ; shift hi byte with carry
+              phi           r8
+              dec           r7
+              glo           r7
+              lbnz          lshiftlp
 
-lshiftret: mov     rb,r8
-	   lbr goodpush
+lshiftret:    mov           rb,r8
+              lbr           goodpush
 
 
-crshift:   sep     scall               ; get value from stack
-           dw      pop
-           lbdf    error               ; jump if stack was empty
-           glo     rb                  ; move number 
-           plo     r7                  ; number of shifts
+crshift:      call          pop                  ; get value from stack
+              lbdf          error                ; jump if stack was empty
+              glo           rb                   ; move number 
+              plo           r7                   ; number of shifts
 
-           sep     scall               ; get next number
-           dw      pop
-           lbdf    error               ; jump if stack was empty
-           mov     r8,rb
+              call          pop                  ; get next number
+              lbdf          error                ; jump if stack was empty
+              mov           r8,rb
 
-           glo     r7                  ; zero shift is identity 
-           lbnz    rshiftlp
-           lbr     rshiftret           ; return with no shift
+              glo           r7                   ; zero shift is identity 
+              lbnz          rshiftlp
+              lbr           rshiftret            ; return with no shift
 
-rshiftlp:  ghi     r8
-           shr                         ; shift hi byte
-           phi     r8
-           glo     r8
-           shrc                        ; shift lo byte with carry
-           plo     r8
-           dec     r7
-           glo     r7
-           lbnz    rshiftlp
-   
-rshiftret: mov     rb,r8
-	   lbr goodpush
+rshiftlp:     ghi           r8
+              shr                                ; shift hi byte
+              phi           r8
+              glo           r8
+              shrc                               ; shift lo byte with carry
+              plo           r8
+              dec           r7
+              glo           r7
+              lbnz          rshiftlp
+
+rshiftret:    mov           rb,r8
+              lbr           goodpush
 
 
 ; delay for approx 1 millisecond on 4MHz 1802
@@ -3484,20 +3479,18 @@ cbload2:      ldn           rb
               ;db '.'  ; Just for debugging print a dot for each line loaded
               call          tknizerb
               push          rb
-; RC/ASM doesn't like nested if/else/then so we will comment all of this out
-; If you want to turn off USE_CBUFFER you will have to fix this
-; ifndef USE_CBUFFER
-;              ldi           low freemem
-;              plo           r9
-;              lda           r9
-;              phi           rb
-;              ldn           r9
-;              plo           rb
-;              inc           rb
-;              inc           rb
-; else
+#ifndef USE_CBUFFER
+              ldi           low freemem
+              plo           r9
+              lda           r9
+              phi           rb
+              ldn           r9
+              plo           rb
+              inc           rb
+              inc           rb
+#else
               mov           rb,cbuffer
-; endif                            
+#endif                            
               call          exec
               pop           rb
               inc           rb
@@ -3683,23 +3676,23 @@ setupfd:      mov           rd, fildes
 ; **********************************************************
 touc:         ldn           rf                   ; check for quote
               smi           022h
-              lbz            touc_qt              ; jump if quote
+              lbz           touc_qt              ; jump if quote
               ldn           rf                   ; get byte from string
-              lbz            touc_dn              ; jump if done
+              lbz           touc_dn              ; jump if done
               smi           'a'                  ; check if below lc
-              lbnf           touc_nxt             ; jump if so
+              lbnf          touc_nxt             ; jump if so
               smi           27                   ; check upper range
-              lbdf           touc_nxt             ; jump if above lc
+              lbdf          touc_nxt             ; jump if above lc
               adi           'A'+27
               str           rf
 touc_nxt:     inc           rf                   ; point to next character
-              lbr            touc                 ; loop to check rest of string
+              lbr           touc                 ; loop to check rest of string
 touc_dn:      rtn                                ; return to caller
 touc_qt:      inc           rf                   ; move past quote
 touc_qlp:     lda           rf                   ; get next character
               bz            touc_dn              ; exit if terminator found
               smi           022h                 ; check for quote charater
-              lbz            touc                 ; back to main loop if quote
+              lbz           touc                 ; back to main loop if quote
               br            touc_qlp             ; otherwise keep looking
 ; [GDJ] type out number according to selected BASE and signed/unsigned flag
 typenumind:
@@ -3711,7 +3704,7 @@ typenos:
               plo           r9
               ldn           r9
               smi           10
-              bz           typenuminddec
+              bz            typenuminddec
               ldi           'x'
               lskp
 typenuminddec:
@@ -3732,9 +3725,9 @@ typenumx:
               mov           rf, buffer
               glo           re
               bz            typenumU
-              call          f_intout    ; since D=re SCRT will preserve either way
+              call          f_intout             ; since D=re SCRT will preserve either way
               br            typeout
-typenumU:     call          f_uintout   ; since D=re SCRT will preserve either way
+typenumU:     call          f_uintout            ; since D=re SCRT will preserve either way
               br            typeout
 typehex:
               mov           rd,rb
@@ -3743,10 +3736,10 @@ typehex:
               plo           r9
               ldn           r9
               ani           4
-              bnz           hex16            ; if option bit 2 set, always do 4 digits
+              bnz           hex16                ; if option bit 2 set, always do 4 digits
               ghi           rd
-              bz            hexbyte          ; otherwise do 2 digits for byte, 4 digits for word
-hex16:        ghi           rd               ; in case we jumped in
+              bz            hexbyte              ; otherwise do 2 digits for byte, 4 digits for word
+hex16:        ghi           rd                   ; in case we jumped in
               call          f_hexout4
               br            typeout
 hexbyte:      call          f_hexout2
@@ -3799,11 +3792,22 @@ ishex:        call          isnum
               bnf           passes               ; jump if so
               br            fails
               ; clear tos, himem & rstack blocks
-              
+
 ;--------------------------------------------------------------
 ;    Read byte from UART if char available
 ;    return in r7.0 - else return null
-;
+;--------------------------------------------------------------
+#ifdef USE_UART_BIOS
+inkey:        call          f_utest
+              lbnf          nokey
+              call          f_uread
+              plo           r7
+              rtn
+nokey:        ldi           0h
+              plo           r7
+              rtn
+#else
+;--------------------------------------------------------------
 ;    from original bios code of Bob Armstrong
 ;    modified for non-blocking console input
 ;--------------------------------------------------------------
@@ -3824,6 +3828,8 @@ inkey:        ldi           015h                 ; need UART line status registe
 nokey:        ldi           0h
               plo           r7
               rtn
+#endif
+
 ;------------------------------------------------------------------
 ; Generate a psuedo-random byte
 ;
@@ -3893,27 +3899,24 @@ ctohere:      call          pop
               str           r9
               lbr           good
 
-cdottok:      call         pop
-              lbdf         error
-              glo          rb
-              ani          080h 
-              lbz          error
-              glo          rb
-              sdi          LAST_TOK
-              lbnf         error
-              ldi          0
+cdottok:      call          pop
+              lbdf          error
+              glo           rb
+              ani           080h 
+              lbz           error
+              glo           rb
+              sdi           LAST_TOK
+              lbnf          error
+              ldi           0
               stxd
-              glo          rb
+              glo           rb
               stxd
-              mov          r7,r2
-              inc          r7
-              call         seenotn
+              mov           r7,r2
+              inc           r7
+              call          seenotn
               irx
               irx
-              lbr          good
-
-            
-
+              lbr           good
 
 
 hello:        db            'Rc/Forth 0.5',0
@@ -4002,8 +4005,8 @@ cmdtable:     db            'WHIL',('E'+80h)
               db            'RSEE',('D'+80h)
               db            'RP',('@'+80h)
               db            ('('+80h)
-              db            'OP'+(80h+'T')
-              db            '.TO'+(80h+'K')
+              db            'OP',('T'+80h)
+              db            '.TO',('K'+80h)
               db            0                    ; no more tokens
 cmdvecs:      dw            cwhile               ; 81h
               dw            crepeat              ; 82h
@@ -4088,7 +4091,7 @@ cmdvecs:      dw            cwhile               ; 81h
               dw            cthen                ; alias ENDIF=then (as in gforth)
               dw            crseed
               dw            crpat
-              dw            0             ; no handler for ( comment )
+              dw            0                    ; no handler for ( comment )
               dw            copt  
               dw            cdottok
 
@@ -4107,7 +4110,7 @@ cmdvecs:      dw            cwhile               ; 81h
 
 #ifdef BLOAD_TEXT
 loadtext:
-   include extended.inc
+   #include extended.inc
 #ifdef STGROMBLOAD
 #undef STGROMBLOAD
 #endif
@@ -4121,10 +4124,10 @@ extblock:
 #endif
 
 #ifdef        STGROMBLOAD
-              include       stgrombload.inc
+              #include       stgrombload.inc
 #endif
 #ifdef        RAMBLOAD
-              include       rambload.inc
+              #include       rambload.inc
 #endif
 
 #ifdef        BLOAD_BIN
@@ -4138,9 +4141,16 @@ freemem:      dw            storage
 fstack:       dw            0
 himem:        dw            0
 jump:         ds            3
+rseed:        ds            4
+basev:        db            0
+basen:        db            0
+option:       dw            0
 fildes:       ds            20
 dta:          ds            512
 buffer:       ds            256
+#ifdef USE_CBUFFER
+cbuffer:      ds            256
+#endif
 storage:      dw            0
 #endif
               end           start
