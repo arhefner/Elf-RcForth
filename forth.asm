@@ -868,7 +868,7 @@ mdnorm:       ghi           rb                   ; get high byte if divisor
               plo           re                   ; store into sign flag
               ghi           rb                   ; need to see if RB is negative
               shl                                ; shift high byte to df
-              bnf           mdnorm2              ; jump if not
+              lbnf          mdnorm2              ; jump if not
               ghi           rb                   ; 2s compliment on RB
               xri           0ffh
               phi           rb
@@ -1076,7 +1076,7 @@ cmdloop:      mov           rc,rb                ; save buffer address
 ; ************************
 tokloop:      ldn           r7                   ; get byte from token table
               ani           128                  ; check if last byte of token
-              bnz           cmdend               ; jump if last byte
+              lbnz          cmdend               ; jump if last byte
               ldn           r7                   ; reget token byte
               str           r2                   ; store to stack
               ldn           rb                   ; get byte from buffer
@@ -1091,13 +1091,13 @@ tokloop:      ldn           r7                   ; get byte from token table
 toknomtch:    mov           rb,rc                ; recover saved address
 nomtch1:      ldn           r7                   ; get byte from token
               ani           128                  ; looking for last byte of token
-              bnz           nomtch2              ; jump if found
+              lbnz          nomtch2              ; jump if found
               inc           r7                   ; point to next byte
-              br            nomtch1              ; and keep looking
+              lbr           nomtch1              ; and keep looking
 nomtch2:      inc           r7                   ; point to next token
               inc           r8                   ; increment command number
               ldn           r7                   ; get next token byte
-              bnz           cmdloop              ; jump if more tokens to check
+              lbnz          cmdloop              ; jump if more tokens to check
               br            notoken              ; jump if no token found
 ; ***********************************************************
 ; *** Made it to last byte of token, check remaining byte ***
@@ -1107,7 +1107,7 @@ cmdend:       ldn           r7                   ; get byte fro token
               str           r2                   ; save to stack
               ldn           rb                   ; get byte from buffer
               sm                                 ; do they match
-              bnz           toknomtch            ; jump if not
+              lbnz          toknomtch            ; jump if not
               inc           rb                   ; point to next byte
               ldn           rb                   ; get it
 #ifndef NO_TOKEN_COMPRESSION    
@@ -1116,7 +1116,7 @@ cmdend:       ldn           r7                   ; get byte fro token
               ldn           rb
 #endif                            
               smi           (' '+1)              ; it must be whitespace
-              bdf           toknomtch            ; otherwise no match
+              lbdf          toknomtch            ; otherwise no match
 ; *************************************************************
 ; *** Match found, store command number into command buffer ***
 ; *************************************************************
@@ -1205,20 +1205,20 @@ nocconstpop:  mov           rb,rc
 nocconst:
               ldn           rb
               smi           '0'
-              bnz           notokenbase          ; if no leading 0 can't be 0x or 0#
+              lbnz          notokenbase          ; if no leading 0 can't be 0x or 0#
               inc           rb
               ldn           rb
               smi           'X'
               bz            notoken_0            ; 0xHexNumber
               ldn           rb
               smi           '#'
-              bnz           notokenbaseadj       ; 0#DecNumber
+              lbnz          notokenbaseadj       ; 0#DecNumber
 notoken_0:
               ldn           rb
               inc           rb
               smi           'X'
               lbz           hexnum
-              br            decnum
+              lbr           decnum
 notokenbaseadj: dec         rb                   ; point back at 0
 notokenbase:
 ;              mov           rd, basen
@@ -1236,7 +1236,7 @@ decnum:
               plo           re
               ldn           rb                   ; get byte
               smi           '-'                  ; is it negative
-              bnz           notoken1             ; jump if not
+              lbnz          notoken1             ; jump if not
               inc           rb                   ; move past negative
               ldi           1                    ; set negative flag
               plo           re
@@ -1298,14 +1298,14 @@ numberlp:     ghi           r7                   ; copy number to temp (don't us
               ldn           rb                   ; get byte
 #ifndef NO_TOKEN_COMPRESSION
               ani           080h 
-              bnz           numberdn
+              lbnz          numberdn
               ldn           rb   
 #endif                             ;              
               smi           (' '+1)              ; check for space
-              bnf           numberdn             ; number also done
+              lbnf          numberdn             ; number also done
               ldn           rb
               smi           '0'                  ; check for below numbers
-              bnf           numbererr            ; jump if not a number
+              lbnf          numbererr            ; jump if not a number
               ldn           rb
               smi           ('9'+1)
               bdf           numbererr
@@ -1593,7 +1593,7 @@ execvar:      call          push                 ; push var address to stack
 ;
 ;          org     600h
 cdup:         call          pop                  ; pop value from forth stack
-              bdf           error                ; jump if stack was empty
+              lbdf          error                ; jump if stack was empty
               call          push                 ; push back twice
 goodpush:                                        ; other things come here to push once
               call          push
@@ -1602,10 +1602,10 @@ good:         ldi           0                    ; indicate success
 error:        ldi           1
               lbr           execret              ; return to caller
 cdrop:        call          pop                  ; pop value from stack
-              bdf           error                ; jump if stack was empty
-              br            good                 ; return
+              lbdf          error                ; jump if stack was empty
+              lbr           good                 ; return
 cplus:        call          pop                  ; get value from stack
-              bdf           error                ; jump if stack was empty
+              lbdf          error                ; jump if stack was empty
               mov           r7,rb
               call          pop                  ; next number
               lbdf          error                ; jump if stack was empty
@@ -1646,9 +1646,9 @@ typegood:
               lbr            good                 ; return
 
 cudot:        call          pop
-              bdf           cdoterr              ; jump if stack was empty
+              lbdf          cdoterr              ; jump if stack was empty
               ldi           0
-              br            typegoode
+              lbr           typegoode
 cdotx:
               call          pop
               bdf           canderr
@@ -1773,7 +1773,7 @@ loopcnt:      mov           r7,rb
               str           r2                   ; place into memory
               ghi           r7                   ; get high of count
               smb                                ; continue subtract
-              bdf           cloopdn              ; jump if loop complete
+              lbdf          cloopdn              ; jump if loop complete
               mov           r8,rb
               call          rpop                 ; get loop address
               call          rpush                ; keep on stack as well
@@ -1915,7 +1915,7 @@ cwordslp:     lda           r7                   ; get byte
               lbz            cwordsdn             ; jump if done
               plo           rb                   ; save it
               ani           128                  ; check for final of token
-              bnz           cwordsf              ; jump if so
+              lbnz          cwordsf              ; jump if so
               glo           rb                   ; get byte
               call          disp
               lbr           cwordslp             ; and loop back
@@ -1985,9 +1985,9 @@ emitpout:     br            gooddisp
 cwhile:       call          pop
               lbdf          error                ; jump if error
               glo           rb                   ; need to check for zero
-              bnz           whileno              ; jump if not zero
+              lbnz          whileno              ; jump if not zero
               ghi           rb                   ; check high byte
-              bnz           whileno
+              lbnz          whileno
               mov           ra,r2
               inc           ra                   ; point to R[6]
               lda           ra                   ; get command stream
@@ -2006,9 +2006,9 @@ notwhile:     ldn           rb                   ; retrieve byte
               smi           FREPEAT              ; is it a repeat
               bnz           notrep               ; jump if not
               glo           r7                   ; get while count
-              bz            fndrep               ; jump if not zero
+              lbz           fndrep               ; jump if not zero
               dec           r7                   ; decrement count
-              br            notrep               ; and keep looking
+              lbr           notrep               ; and keep looking
 fndrep:       inc           rb                   ; move past the while
               glo           rb                   ; now put back into R[6]
               str           ra
@@ -2057,7 +2057,7 @@ ifnotif:      ldn           rb                   ; retrieve byte
               smi           FELSE                ; check for ELSE
               bnz           ifnotelse            ; jump if not
               glo           r7                   ; get IF count
-              bnz           ifcnt                ; jump if it is not zero
+              lbnz          ifcnt                ; jump if it is not zero
               inc           rb                   ; move past the else
 ifsave:       glo           rb                   ; store back into instruction pointer
               str           ra
@@ -2392,20 +2392,20 @@ ccolcpy:      lda           rb
               inc           rf
               plo           re                     ; hold temp
               smi           T_NUM                  ; if T_NUM we must copy two more bytes no matter what
-              bnz           cccpyck
+              lbnz          cccpyck
               lda           rb
               str           rf
               inc           rf
               lda           rb
               str           rf
               inc           rf
-              br            ccolcpy
+              lbr           ccolcpy
 cccpyck:      glo           re
               smi           FSEMI
               bz            ccolcpydn
               glo           re
               smi           T_EOS
-              bnz           ccolcpy
+              lbnz          ccolcpy
 ccolcpydn:    
               glo           rb
               str           ra
@@ -2525,7 +2525,7 @@ colonlp1:                                        ; lda     rb                  ;
               lbz           colonmark
               lda           rb
               smi           FSEMI                ; look for the ;
-              bnz           colonlp1             ; jump if terminator not found
+              lbnz          colonlp1             ; jump if terminator not found
               ; check this is really the end
 ;              ldn           rb
 ;              smi           T_EOS
@@ -2837,9 +2837,9 @@ seevnoa:
 seevname1:
               inc           r7
               ldn           r7
-              bz            seeveq1
+              lbz           seeveq1
               call          disp
-              br            seevname1
+              lbr           seevname1
 seeveq1:
               call          f_inmsg
               db            ' !',0
@@ -2850,7 +2850,7 @@ cseefunc:     call          dispf
 seefunclp:    call          dispsp
 seefunclpns:
               ldn           r7                   ; get next token
-              bz            seeexit              ; jump if done
+              lbz           seeexit              ; jump if done
               smi           T_ASCII              ; check for ascii
               lbnz          seenota              ; jump if not ascii
               inc           r7                   ; move into string
@@ -3693,7 +3693,7 @@ touc_qlp:     lda           rf                   ; get next character
               bz            touc_dn              ; exit if terminator found
               smi           022h                 ; check for quote charater
               lbz           touc                 ; back to main loop if quote
-              br            touc_qlp             ; otherwise keep looking
+              lbr           touc_qlp             ; otherwise keep looking
 ; [GDJ] type out number according to selected BASE and signed/unsigned flag
 typenumind:
               push          rf                   ; save rf for tokenizer
@@ -3790,7 +3790,7 @@ ishex:        call          isnum
               bnf           fails                ; jump if not
               smi           6                    ; check for less than 'g'
               bnf           passes               ; jump if so
-              br            fails
+              lbr           fails
               ; clear tos, himem & rstack blocks
 
 ;--------------------------------------------------------------
