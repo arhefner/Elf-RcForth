@@ -117,15 +117,23 @@
 
 #endif
 
-
 ; For a RAM build you need to set all this up yourself
 ; you do need BIOS somewhere and if you don't have XMODEM then don't use those commands!
 ; we assume you have BIOS.INC (since you have a BIOS) and that it is correct
 #ifdef        RAM
 #define       ANYROM
+#ifndef CODE
 #define       CODE          06600h
+#endif
+#ifndef XMODEM
 #define       XMODEM        0ed00h
+#endif
+#ifndef RAMBASE
 #define       RAMBASE       0h
+#endif
+#ifndef EXIT
+#define       EXIT          08003h
+#endif
               ; [gnr] The UART is used in inkey so when using bitbang, no working KEY?
 #define       UART_SELECT   6                    ; UART register select I/O port
 #define       UART_DATA     7                    ; UART data I/O port
@@ -136,11 +144,13 @@ xread:        equ           XMODEM + 2*3
 xwrite:       equ           XMODEM + 3*3
 xclosew:      equ           XMODEM + 4*3
 xcloser:      equ           XMODEM + 5*3
-exitaddr:     equ           08003h
+exitaddr:     equ           EXIT
+codebase:     equ           CODE
 ; IMPORTANT. YOUR BIOS WILL REPORT TOO MUCH FREE MEMORY if you are using RAM
 ; So we need an override. This should probably be CODE-1 in most cases
-#define       MEMSIZE_OVERRIDE CODE-1
+#define       MEMSIZE_OVERRIDE (codebase - 1)
 #endif
+
 #ifdef        MCHIP
 #define       ANYROM
 #define       CODE          02000h
@@ -153,6 +163,7 @@ xclosew:      equ           07012h
 xcloser:      equ           07015h
 exitaddr:     equ           07003h
 #endif
+
 #ifdef        PICOROM
 #define       ANYROM
 #define       CODE          0a000h
@@ -165,6 +176,7 @@ xclosew:      equ           08012h
 xcloser:      equ           08015h
 exitaddr:     equ           08003h
 #endif
+
 ; [GDJ] build: asm02 -i -L -DSTGROM forth.asm
 #ifdef        STGROM
 #define       ANYROM        1
@@ -183,18 +195,25 @@ xclosew:      equ           XMODEM + 4*3
 xcloser:      equ           XMODEM + 5*3
 exitaddr:     equ           08003h
 #endif
+
 #ifdef        ELFOS
 #define       CODE          02000h
 stack:        equ           00ffh
 exitaddr:     equ           o_wrmboot
+
 #else
+
 buffer:       equ           RAMBASE+0200h
+
 #ifdef USE_CBUFFER
 cbuffer:      equ           RAMBASE+0300h
 himem:        equ           RAMBASE+0400h
+
 #else
+
 himem:        equ           RAMBASE+0300h
 #endif
+
 rstack:       equ           himem+2
 tos:          equ           rstack+2
 freemem:      equ           tos+2
@@ -207,19 +226,22 @@ option:       equ           basev+2
 storage:      equ           option+2
 stack:        equ           RAMBASE+01ffh
 #endif
+
               #include      bios.inc
+
 #ifdef        ELFOS
               #include      kernel.inc
-              org           8000h
-              lbr           0ff00h
-              db            'rcforth',0
-              dw            9000h
-              dw            endrom+7000h
-              dw            2000h
-              dw            endrom-2000h
-              dw            2000h
-              db            0
+;              org           8000h
+;              lbr           0ff00h
+;              db            'rcforth',0
+;              dw            9000h
+;              dw            endrom+7000h
+;              dw            2000h
+;              dw            endrom-2000h
+;              dw            2000h
+;              db            0
 #endif
+
 ;  R2   - program stack
 ;  R3   - Main PC
 ;  R4   - standard call
@@ -345,7 +367,11 @@ new:          mov           r6,start
               br            newornot             ; common code for warm or cold start
 #endif
 ; Cold start comes here after initcall
-start:        ldi           high himem           ; get page of data segment
+start:        
+#ifdef USE_UART_BIOS
+              call          f_setbd
+#endif
+              ldi           high himem           ; get page of data segment
               phi           r9                   ; place into r9
 #ifdef        ANYROM
               ldi           0ch                  ; form feed to clear screen
@@ -1413,13 +1439,13 @@ notokenlp:    str           rf                   ; write to buffer
               ldn           rb                   ; get next byte
 #ifndef NO_TOKEN_COMPRESSION
               ani           080h                 ; treat a compressed token as whitespace
-              bnz           notokwht
+              lbnz          notokwht
               ldn           rb
 #endif                            
               smi           (' '+1)              ; check for whitespace
-              bnf           notokwht             ; found whitespace
+              lbnf          notokwht             ; found whitespace
               ldn           rb                   ; get byte
-              br            notokenlp            ; get characters til whitespace
+              lbr           notokenlp            ; get characters til whitespace
 notokwht:     ldi           0                    ; need ascii terminator
               str           rf                   ; store into buffer
               inc           rf                   ; point to next position
@@ -1558,7 +1584,7 @@ ascnoerr:     inc           r7                   ; point to type
               inc           r7
               ldn           r7                   ; get type
               smi           FVARIABLE            ; check for variable
-              bz            execvar              ; jump if so
+              lbz           execvar              ; jump if so
               ldn           r7                   ; get type
               smi           FCOLON               ; check for function
               bnz           ascerr               ; jump if not
@@ -1998,13 +2024,13 @@ cwhile:       call          pop
               plo           r7
 findrep:      ldn           rb                   ; get byte from stream
               smi           FWHILE               ; was a while found
-              bnz           notwhile             ; jump if not
+              lbnz          notwhile             ; jump if not
               inc           r7                   ; increment while count
 notrep:       inc           rb                   ; point to next byte
-              br            findrep              ; and keep looking
+              lbr           findrep              ; and keep looking
 notwhile:     ldn           rb                   ; retrieve byte
               smi           FREPEAT              ; is it a repeat
-              bnz           notrep               ; jump if not
+              lbnz          notrep               ; jump if not
               glo           r7                   ; get while count
               lbz           fndrep               ; jump if not zero
               dec           r7                   ; decrement count
@@ -2379,7 +2405,7 @@ ccolon:
               ldn           r9
               plo           rf
               call          ismulti
-              bnz           ccmulti               ; don't skip link for lines 2-n, only line 1
+              lbnz          ccmulti               ; don't skip link for lines 2-n, only line 1
               inc           rf                    ; skip link
               inc           rf
               dec           rb                    ; point back at FCOLON
@@ -2641,14 +2667,14 @@ clist1:
               plo           r9
               ldn           r9
               stxd
-              ani           0feh   ; turn on spaces (but save to restore)
+              ani           0feh                 ; turn on spaces (but save to restore)
               str           r9
               call          csee_sub0
               ldi           low option+1
               plo           r9
               irx
               ldn           r2
-              str           r9    ; restore option byte
+              str           r9                   ; restore option byte
               pop           r7
               ldn           r7
               phi           rb
@@ -2887,11 +2913,11 @@ seenotn:      mov           rb,cmdtable
               plo           r8                   ; token counter
 seenotnlp:    dec           r8                   ; decrement count
               glo           r8                   ; get count
-              bz            seetoken             ; found the token
+              lbz           seetoken             ; found the token
 seelp3:       lda           rb                   ; get byte from token
               ani           128                  ; was it last one?
-              bnz           seenotnlp            ; jump if it was
-              br            seelp3               ; keep looking
+              lbnz          seenotnlp            ; jump if it was
+              lbr           seelp3               ; keep looking
 seetoken:     ldn           rb                   ; get byte from token
               ani           128                  ; is it last
               lbnz          seetklast            ; jump if so
@@ -3168,7 +3194,7 @@ copt:         mov           rb,option
 
 
 ; call to get a variable into RA, take var offest (1 byte) after call
-getvar:      lda            r6                    ; read variable #
+getvar:      lda            r6                   ; read variable #
              plo            r9
              lda            r9
              phi            ra
@@ -3185,7 +3211,7 @@ getvar:      lda            r6                    ; read variable #
 ismulti:    ldi   low jump
             plo   r9
             ldn   r9
-            xri   0c0h    ; returns non-zero if we ARE in multi mode
+            xri   0c0h                           ; returns non-zero if we ARE in multi mode
             rtn
 
 
@@ -3212,7 +3238,7 @@ addat:
               lbr           goodpushb
 crpat:        mov           r8,rstack   
               br            addat           
-
+.align        para
 cef:          ldi           0                    ; start with zero
               phi           rb
               bn1           cef1                 ; jump if ef1 not on
@@ -4134,6 +4160,7 @@ extblock:
 endextblock:
 #endif
 endrom:       equ           $
+
 #ifdef        ELFOS
 rstack:       dw            0
 tos:          dw            0
@@ -4153,4 +4180,5 @@ cbuffer:      ds            256
 #endif
 storage:      dw            0
 #endif
+
               end           start

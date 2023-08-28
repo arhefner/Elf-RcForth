@@ -17,6 +17,6 @@
   db 063h    ; ORG.1-3 again
   db 0FFh,0C0h,0A4h,0B9h,12h,0A6h,0DCh, 40h,00h,0ah,
 
-include wordsram0.inc
+#include wordsram0.inc
   
 #endif
